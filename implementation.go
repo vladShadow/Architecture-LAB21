@@ -8,46 +8,79 @@ import (
 const (
 	operators = "+-*/^"
 	digits    = "1234567890"
+	EXPR      = 0
+	SIGN      = 1
+	TIER1     = 1
+	TIER2     = 2
+	TIER3     = 3
+	PLAIN     = 100
 )
+
+type Atom struct {
+	Value string
+	Type  int
+	Sign  int
+}
 
 //PostfixToInfix converts math statement
 func PostfixToInfix(input string) (string, error) {
-	var result string = ""
+	var err error = nil
 	if input == "" {
 		return "", fmt.Errorf("Input error: the input expression shall not be empty")
 	}
 	var arr = strings.Split(input, " ")
-	err := testArray(arr)
-	if err != nil {
+	if err := testArray(arr); err != nil {
 		return "", err
 	}
-	result += arr[0]
-	for i := 1; i < len(arr); i += 2 {
-		if !strings.ContainsAny(arr[i], digits) ||
-			!strings.ContainsAny(arr[i+1], operators) {
-			return "", fmt.Errorf("Input error: the input expression is not correct as a postfix expression")
-		}
 
-		result += " " + arr[i+1] + " " + arr[i]
-		if bracesNeeded(arr, i+1) {
-			result = "(" + result + ")"
+	atoms := []Atom{}
+	for _, str := range arr {
+		if strings.ContainsAny(str, digits) {
+			atoms = append(atoms, Atom{str, EXPR, PLAIN})
+		} else {
+			if strings.ContainsAny(str, "+-") {
+				atoms = append(atoms, Atom{str, SIGN, TIER1})
+			} else if strings.ContainsAny(str, "*/") {
+				atoms = append(atoms, Atom{str, SIGN, TIER2})
+			} else if strings.ContainsAny(str, "^") {
+				atoms = append(atoms, Atom{str, SIGN, TIER3})
+			}
 		}
 	}
-	return result, nil
+	i, err := next(atoms)
+	for i != 0 && err == nil {
+		if atoms[i-2].Sign < atoms[i].Sign {
+			atoms[i-2].Value = "(" + atoms[i-2].Value + ")"
+		}
+		if atoms[i-1].Sign < atoms[i].Sign {
+			atoms[i-1].Value = "(" + atoms[i-1].Value + ")"
+		}
+		atoms[i-2].Value = atoms[i-2].Value + " " + atoms[i].Value + " " + atoms[i-1].Value
+		atoms[i-2].Sign = atoms[i].Sign
+		atoms = remove(atoms, i-1)
+		atoms = remove(atoms, i-1)
+		i, err = next(atoms)
+	}
+	return atoms[0].Value, err
 }
 
-func bracesNeeded(arr []string, i int) bool {
-	if i >= len(arr)-1 {
-		return false
+func next(atoms []Atom) (int, error) {
+	var err error = nil
+	if len(atoms) == 1 {
+		return 0, nil
 	}
-	if strings.ContainsAny(arr[i], "+-") &&
-		strings.ContainsAny(arr[i+2], "*/") {
-		return true
-	} else if strings.ContainsAny(arr[i], "*/") &&
-		strings.ContainsAny(arr[i+2], "^") {
-		return true
+	i := 2
+	for err == nil && !(atoms[i-2].Type == EXPR && atoms[i-1].Type == EXPR && atoms[i].Type == SIGN) {
+		i++
+		if i == len(atoms) {
+			err = fmt.Errorf("Input error: the input expression is not correct as a postfix expression")
+		}
 	}
-	return false
+	return i, err
+}
+
+func remove(atoms []Atom, i int) []Atom {
+	return append(atoms[:i], atoms[i+1:]...)
 }
 
 func testArray(arr []string) error {

@@ -56,6 +56,17 @@ func (s *TestSuite) TestNegative9(c *C) {
 	c.Assert(err, ErrorMatches, "Input error: the input expression shall not be empty")
 }
 
+func (s *TestSuite) TestPositive10(c *C) {
+	res, err := PostfixToInfix("7 1 2 * - 5 3 8 + / + 4 ^")
+	c.Assert(err, IsNil)
+	c.Check(res, Equals, "(7 - 1 * 2 + 5 / (3 + 8)) ^ 4")
+}
+func (s *TestSuite) TestPositive11(c *C) {
+	res, err := PostfixToInfix("5 4 3 - +")
+	c.Assert(err, IsNil)
+	c.Check(res, Equals, "5 + 4 - 3")
+}
+
 func ExamplePostfixToInfix() {
 	res, err := PostfixToInfix("2 2 + 81 * 12 / 5 + 12 - 1 ^ 12 * 3 +")
 	if err != nil {
@@ -63,5 +74,5 @@ func ExamplePostfixToInfix() {
 	}
 	fmt.Println(res)
 	// Output:
-	// (2 + 2) * 81 / 12 + 5 - 12 ^ 1 * 12 + 3
+	// ((2 + 2) * 81 / 12 + 5 - 12) ^ 1 * 12 + 3
 }
